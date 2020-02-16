@@ -11,6 +11,8 @@ import java.io.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.sun.tools.attach.VirtualMachine.list;
+
 public class Assign3 {
     public static void main(String[] args) {
         boolean run = true;
@@ -22,29 +24,32 @@ public class Assign3 {
                 case "exit":
                     run = false;
                     stop();
-                case "ptime":
-                    ptime();
+                case "ptime": //TODO this gives an invalid command
+                    ptime(command);
                     continue;
                 case "list":
                     list();
                     continue;
-                case "history":
+                case "history": //TODO this gives an invalid command at the end evan though it works
                     getHistory(inputList, inputList.size());
             }
             if (command.contains("cd")) {
                 cd(command);
-            } else if (command.contains("history ^ ")) {
+            } else if (command.contains("history last")) {
                 String[] input = command.split(" ");
                 int number = Integer.parseInt(input[2]);
                 getNumberedHistory(inputList, number);
-            }
-            else if(command.contains("mdir")){
+            } else if (command.contains(("history ^ "))) {
+                String[] input = command.split(" ");
+                int number = Integer.parseInt(input[2]);
+                historyInput(inputList, number);
+            } else if (command.contains("mdir")) {
                 makeDir(command);
-            }
-            else if(command.contains("rdir")){
+            } else if (command.contains("rdir")) {
                 removeDir(command);
-            }
-            else {
+            } else if (command.contains("|")) {
+                pipe(command);
+            } else {
                 System.out.println("Invalid Command: " + command);
             }
         }
@@ -56,10 +61,10 @@ public class Assign3 {
         int counter = 1;
         for (int i = 0; i < lengthList; i++) {
             System.out.println(counter + " : " + inputList.get(i));
-            counter ++;
+            counter++;
         }
     }
-//TODO do the right history command
+
     private static void getNumberedHistory(ArrayList inputList, int num) {
         ArrayList<Object> tempList = new ArrayList<>();
         //adding past num things to list
@@ -80,171 +85,253 @@ public class Assign3 {
             System.out.println(tempList.get(i));
         }
     }
+//TODO this is still not working
+    private static void historyInput(ArrayList inputList, int num) {
+        if (inputList.size() < num) {
+            num = inputList.size();
+            Object tempInput = inputList.get(inputList.size() - num);
+            //String newInput = tempInput.toString();
+            System.out.println("Number provided was bigger than history log. The first command in history log was given instead");
+        }
+        Object tempInput = inputList.get(inputList.size() - num);
+        String newInput = tempInput.toString();
+            try {
+                switch (newInput) {
+                    case "exit":
+                        stop();
+                    case "ptime":
+                        ptime(newInput);
+                        //continue;
+                    case "list":
+                        list();
+                        //continue;
+                    case "history":
+                        getHistory(inputList, inputList.size());
+                }
+                if (newInput.contains("cd")) {
+                    cd(newInput);
+                } else if (newInput.contains("history last")) {
+                    String[] input = newInput.split(" ");
+                    int number = Integer.parseInt(input[2]);
+                    getNumberedHistory(inputList, number);
+                } else if (newInput.contains(("history ^ "))) {
+                    String[] input = newInput.split(" ");
+                    int number = Integer.parseInt(input[2]);
+                    historyInput(inputList, number);
+                } else if (newInput.contains("mdir")) {
+                    makeDir(newInput);
+                } else if (newInput.contains("rdir")) {
+                    removeDir(newInput);
+                } else if (newInput.contains("|")) {
+                    pipe(newInput);
+                } else {
+                    System.out.println("Invalid Command: " + newInput);
+                }
+            } catch (Exception ex) {
+                System.out.println("hi");
+            }
+        }
 
-    private static void list() {
-        String currentDir = System.getProperty("user.dir");
-        File fileDir = new File(currentDir);
-        String[] temp = fileDir.list();
-        File[] temp2 = fileDir.listFiles();
-        try {
-            if(!temp2[0].exists()) {
-                System.out.println("Empty File Directory1");
-            }else{
-                for (int i = 0; i < temp.length; i++) {
-                    String dir = "-";
-                    String read = "-";
-                    String write = "-";
-                    String execute = "-";
-                    long fileSize = 0;
-                    long lastMod = 0;
-                    if (temp2[i].isDirectory()) {
-                        dir = "d";
+
+
+        private static void list () {
+            String currentDir = System.getProperty("user.dir");
+            File fileDir = new File(currentDir);
+            String[] temp = fileDir.list();
+            File[] temp2 = fileDir.listFiles();
+            try {
+                if (!temp2[0].exists()) {
+                    System.out.println("Empty File Directory1");
+                } else {
+                    for (int i = 0; i < temp.length; i++) {
+                        String dir = "-";
+                        String read = "-";
+                        String write = "-";
+                        String execute = "-";
+                        long fileSize = 0;
+                        long lastMod = 0;
+                        if (temp2[i].isDirectory()) {
+                            dir = "d";
+                        }
+                        if (temp2[i].canRead()) {
+                            read = "r";
+                        }
+                        if (temp2[i].canWrite()) {
+                            write = "w";
+                        }
+                        if (temp2[i].canExecute()) {
+                            execute = "x";
+                        }
+                        fileSize = temp2[i].length();
+                        lastMod = temp2[i].lastModified();
+                        SimpleDateFormat date = new SimpleDateFormat("MM/dd/yyyy HH:mm");
+                        GregorianCalendar calendar = new GregorianCalendar(TimeZone.getTimeZone("US/Mountain"));
+                        calendar.setTimeInMillis(lastMod);
+                        Formatter fmt = new Formatter();
+                        fmt.format("%10s", fileSize);
+                        System.out.println(dir + read + write + execute + " " + fmt + " bytes " + date.format(calendar.getTime()) + " " + temp[i]);
                     }
-                    if (temp2[i].canRead()) {
-                        read = "r";
-                    }
-                    if (temp2[i].canWrite()) {
-                        write = "w";
-                    }
-                    if (temp2[i].canExecute()) {
-                        execute = "x";
-                    }
-                    fileSize = temp2[i].length();
-                    lastMod = temp2[i].lastModified();
-                    SimpleDateFormat date = new SimpleDateFormat("MM/dd/yyyy HH:mm");
-                    GregorianCalendar calendar = new GregorianCalendar(TimeZone.getTimeZone("US/Mountain"));
-                    calendar.setTimeInMillis(lastMod);
-                    Formatter fmt = new Formatter();
-                    fmt.format("%10s", fileSize);
-                    System.out.println(dir + read + write + execute + " " + fmt + " bytes " + date.format(calendar.getTime()) + " " + temp[i]);
+
+                }
+            } catch (Exception ex) {
+                System.out.println("Empty File Directory");
+            }
+        }
+//TODO this doesnt work right, figure out how pipelining workd outside of my command shell so i can replacate here
+        private static void pipe (String command){
+            String[] commandList = splitCommand(command);
+            for (int i = 0; i < commandList.length; i++) {
+                System.out.println(commandList[i]);
+            }
+            String[] p1Cmd = {commandList[0]};
+            String[] p2Cmd = {commandList[1]};
+
+            ProcessBuilder pb1 = new ProcessBuilder(p1Cmd);
+            ProcessBuilder pb2 = new ProcessBuilder(p2Cmd);
+
+            pb1.redirectInput(ProcessBuilder.Redirect.INHERIT);
+            //pb1.redirectOutput(ProcessBuilder.Redirect.PIPE);
+
+            pb2.redirectOutput(ProcessBuilder.Redirect.INHERIT);
+
+            try {
+                Process p1 = pb1.start();
+                Process p2 = pb2.start();
+
+                java.io.InputStream in = p1.getInputStream();
+                java.io.OutputStream out = p2.getOutputStream();
+
+                int c;
+                while ((c = in.read()) != -1) {
+                    out.write(c);
                 }
 
+                out.flush();
+                out.close();
+
+                p1.waitFor();
+                p2.waitFor();
+            } catch (Exception ex) {
             }
-        }catch (Exception ex){
-            System.out.println("Empty File Directory");
         }
-    }
+
+        private static String cd (String command){
+            String currentDir = System.getProperty("user.dir");
+
+            if (command.equals("cd")) {
+                currentDir = System.getProperty("user.home");
+                java.nio.file.Path proposed = java.nio.file.Paths.get(currentDir);
+                currentDir = System.setProperty("user.dir", proposed.toString());
 
 
-    //TODO finish cd
-    private static String cd(String command) {
-        String currentDir = System.getProperty("user.dir");
-
-        if (command.equals("cd")) {
-            currentDir = System.getProperty("user.home");
-            java.nio.file.Path proposed = java.nio.file.Paths.get(currentDir);
-            currentDir = System.setProperty("user.dir", proposed.toString());
-
-
-        } else if (command.equals("cd ..")) {
-            File fileDir = new File(currentDir);
-            currentDir = fileDir.getParent();
-            java.nio.file.Path proposed = java.nio.file.Paths.get(currentDir);
-            currentDir = System.setProperty("user.dir", proposed.toString());
-
-        } else {
-            if (command.contains("\"")) {
-                makeDir(command);
-                String[] commandList = splitCommand(command);
-                java.nio.file.Path proposed = java.nio.file.Paths.get(currentDir, commandList[1]);
+            } else if (command.equals("cd ..")) {
+                File fileDir = new File(currentDir);
+                currentDir = fileDir.getParent();
+                java.nio.file.Path proposed = java.nio.file.Paths.get(currentDir);
                 currentDir = System.setProperty("user.dir", proposed.toString());
 
             } else {
-                File fileDir = new File(currentDir);
-                String[] inputList = command.split(" ");
-                String[] temp = fileDir.list();
-                File[] directoryList = fileDir.listFiles();
-                boolean doesExist = false;
-                for (int i = 0; i < temp.length; i++) {
-                    if (directoryList[i].getName().equals(inputList[1])) {
-                        java.nio.file.Path proposed = java.nio.file.Paths.get(currentDir, inputList[1]);
-                        currentDir = System.setProperty("user.dir", proposed.toString());
-                        doesExist = true;
+                if (command.contains("\"")) {
+                    makeDir(command);
+                    String[] commandList = splitCommand(command);
+                    java.nio.file.Path proposed = java.nio.file.Paths.get(currentDir, commandList[1]);
+                    currentDir = System.setProperty("user.dir", proposed.toString());
+
+                } else {
+                    File fileDir = new File(currentDir);
+                    String[] inputList = command.split(" ");
+                    String[] temp = fileDir.list();
+                    File[] directoryList = fileDir.listFiles();
+                    boolean doesExist = false;
+                    for (int i = 0; i < temp.length; i++) {
+                        if (directoryList[i].getName().equals(inputList[1])) {
+                            java.nio.file.Path proposed = java.nio.file.Paths.get(currentDir, inputList[1]);
+                            currentDir = System.setProperty("user.dir", proposed.toString());
+                            doesExist = true;
+                        }
                     }
-                }
-                if (doesExist == false) {
-                    System.out.println("Directory does not exist");
-                }
+                    if (doesExist == false) {
+                        System.out.println("Directory does not exist");
+                    }
 
+                }
             }
+            return currentDir;
         }
-        return currentDir;
-    }
 
-    private static String[] splitCommand(String input) {
-        java.util.List<String> matchList = new java.util.ArrayList<>();
+        private static String[] splitCommand (String input){
+            java.util.List<String> matchList = new java.util.ArrayList<>();
 
-        Pattern regex = Pattern.compile("[^\\s\"']+|\"([^\"]*)\"|'([^']*)'");
-        Matcher regexMatcher = regex.matcher(input);
-        while (regexMatcher.find()) {
-            if (regexMatcher.group(1) != null) {
-                // Add double-quoted string without the quotes
-                matchList.add(regexMatcher.group(1));
-            } else if (regexMatcher.group(2) != null) {
-                // Add single-quoted string without the quotes
-                matchList.add(regexMatcher.group(2));
+            Pattern regex = Pattern.compile("[^\\s\"']+|\"([^\"]*)\"|'([^']*)'");
+            Matcher regexMatcher = regex.matcher(input);
+            while (regexMatcher.find()) {
+                if (regexMatcher.group(1) != null) {
+                    // Add double-quoted string without the quotes
+                    matchList.add(regexMatcher.group(1));
+                } else if (regexMatcher.group(2) != null) {
+                    // Add single-quoted string without the quotes
+                    matchList.add(regexMatcher.group(2));
+                } else {
+                    // Add unquoted word
+                    matchList.add(regexMatcher.group());
+                }
+            }
+
+            return matchList.toArray(new String[matchList.size()]);
+        }
+
+        private static void makeDir (String command){
+            String[] commandList = splitCommand(command);
+            File newFile = new File(commandList[1]);
+            boolean test = newFile.mkdirs();
+            if (test) {
+                System.out.println("New directory named \"" + commandList[1] + "\" created");
             } else {
-                // Add unquoted word
-                matchList.add(regexMatcher.group());
+                System.out.println("directory named \"" + commandList[1] + "\" already exists or things were mispelled");
             }
         }
 
-        return matchList.toArray(new String[matchList.size()]);
-    }
+        private static void removeDir (String command){
+            String[] commandList = splitCommand(command);
+            File file = new File(commandList[1]);
+            boolean test = file.delete();
+            if (test) {
+                System.out.println("file or directory named \"" + commandList[1] + "\" has been deleted");
+            } else {
+                System.out.println("There was an error during deletion: make sure file is closed or directory is empty");
+            }
 
-    private static void makeDir(String command){
-        String[] commandList = splitCommand(command);
-        File newFile = new File(commandList[1]);
-        boolean test = newFile.mkdirs();
-        if(test){
-            System.out.println("New directory named \"" + commandList[1] + "\" created");
-        }
-        else{
-            System.out.println("directory named \"" + commandList[1] + "\" already exists or things were mispelled");
-        }
-    }
-
-    private static void removeDir(String command){
-        String[] commandList = splitCommand(command);
-        File file = new File(commandList[1]);
-        boolean test = file.delete();
-        if (test) {
-            System.out.println("file or directory named \"" + commandList[1] + "\" has been deleted");
-        }
-        else{
-            System.out.println("There was an error during deletion: make sure file is closed or directory is empty");
         }
 
-    }
+        private static void ptime (String input){
+            try {
 
-    private static void ptime() {
-        try {
-            String[] command = {"nano", "ProcessExample.java"};
-            ProcessBuilder pb = new ProcessBuilder(command);
-            long start = System.currentTimeMillis();
-            Process p = pb.start();
+                String[] command = {input};
+                ProcessBuilder pb = new ProcessBuilder(command);
+                long start = System.currentTimeMillis();
+                Process p = pb.start();
 
-            System.out.println("Starting to wait");
-            p.waitFor();
-            long end = System.currentTimeMillis();
-            System.out.printf("Program took %d milliseconds\n", end - start);
-        } catch (IOException ex) {
-            System.out.println("Illegal command");
-        } catch (Exception ex) {
-            System.out.println("Something else bad happened");
+                System.out.println("Starting to wait");
+                p.waitFor();
+                long end = System.currentTimeMillis();
+                System.out.printf("Program took %d milliseconds\n", end - start);
+            } catch (IOException ex) {
+                System.out.println("Illegal command im still not working");
+            } catch (Exception ex) {
+                System.out.println("Something else bad happened");
+            }
+        }
+
+        private static String getInput () {
+            Scanner myObject = new Scanner(System.in);
+            String currentDirectory = System.getProperty("user.dir");
+            System.out.print(currentDirectory + " $ ");
+            String input2 = myObject.nextLine();
+            return input2;
+
+        }
+
+        private static void stop () {
+            System.exit(5);
         }
     }
-
-    private static String getInput() {
-        Scanner myObject = new Scanner(System.in);
-        String currentDirectory = System.getProperty("user.dir");
-        System.out.print(currentDirectory + " $ ");
-        String input2 = myObject.nextLine();
-        return input2;
-
-    }
-
-    private static void stop() {
-        System.exit(5);
-    }
-}
