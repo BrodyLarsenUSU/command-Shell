@@ -1,12 +1,9 @@
-import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.io.IOException;
 import java.lang.Process;
 import java.lang.ProcessBuilder;
 import java.util.Scanner;
-import java.util.concurrent.TimeUnit;
 import java.io.File;
 import java.io.*;
 import java.util.regex.Matcher;
@@ -56,6 +53,7 @@ public class Assign3 {
                     time = externalCommand(command, time);
                     external = false;
                 } catch (Exception ex) {
+                    System.out.println(ex);
                 }
             }
         }
@@ -63,11 +61,8 @@ public class Assign3 {
 
     }
 
-    private static long externalCommand(String command, long time){
+    private static long externalCommand(String command, long time) {
         String[] p1Cmd = splitCommand(command);
-//        for(int i = 0; i < p1Cmd.length; i++){
-//            System.out.println(p1Cmd[i]);
-//        }
         ProcessBuilder pb1 = new ProcessBuilder(p1Cmd);
         ProcessBuilder test = pb1.command(p1Cmd);
         long end = 0;
@@ -76,30 +71,29 @@ public class Assign3 {
         try {
             start = System.currentTimeMillis();
             Process p1 = test.start();
-            System.out.println(p1.info());
+
             //to display on commandline
             BufferedReader reader = new BufferedReader(new InputStreamReader((p1.getInputStream())));
             String line;
-            while((line = reader.readLine()) != null){
+            while ((line = reader.readLine()) != null) {
                 System.out.println(line);
             }
             System.out.println("");
-            if(p1Cmd[p1Cmd.length - 1].equals("&")){
+            if (p1Cmd[p1Cmd.length - 1].equals("&")) {
                 end = System.currentTimeMillis();
                 thisTime = end - start;
                 time += thisTime;
-            }else
-            p1.waitFor();
+            } else
+                p1.waitFor();
             end = System.currentTimeMillis();
             thisTime = end - start;
             time += thisTime;
 
-        }
-        catch (Exception ex) {
+        } catch (Exception ex) {
             System.out.println("Invalid command: " + command);
             System.out.println(ex);
         }
-    return time;
+        return time;
     }
 
     private static void getHistory(ArrayList inputList, int lengthList) {
@@ -132,7 +126,7 @@ public class Assign3 {
         }
     }
 
-    private static long historyInput(ArrayList inputList, int num , long time) {
+    private static long historyInput(ArrayList inputList, int num, long time) {
         boolean loop = true;
         while (loop) {
             if (inputList.size() == 1) {
@@ -172,20 +166,20 @@ public class Assign3 {
                     pipe(newInput);
                 } else
                     external = true;
-                    while (external) {
-                        try {
-                            time = externalCommand(newInput, time);
-                            external = false;
-                        } catch (Exception ex) {
-                        }
+                while (external) {
+                    try {
+                        time = externalCommand(newInput, time);
+                        external = false;
+                    } catch (Exception ex) {
                     }
-                } catch(Exception ex){
-                    System.out.println("fail");
                 }
-                loop = false;
+            } catch (Exception ex) {
+                System.out.println("fail");
+            }
+            loop = false;
 
 
-    }
+        }
         return time;
     }
 
@@ -196,6 +190,7 @@ public class Assign3 {
         String[] temp = fileDir.list();
         File[] temp2 = fileDir.listFiles();
         try {
+            //checking if there is even an list to search through
             if (!temp2[0].exists()) {
                 System.out.println("Empty File Directory1");
             } else {
@@ -206,6 +201,7 @@ public class Assign3 {
                     String execute = "-";
                     long fileSize = 0;
                     long lastMod = 0;
+                    //going through and checking the files for user privileges
                     if (temp2[i].isDirectory()) {
                         dir = "d";
                     }
@@ -218,13 +214,17 @@ public class Assign3 {
                     if (temp2[i].canExecute()) {
                         execute = "x";
                     }
+
                     fileSize = temp2[i].length();
+
+                    //getting the date of when file was last modified
                     lastMod = temp2[i].lastModified();
                     SimpleDateFormat date = new SimpleDateFormat("MM/dd/yyyy HH:mm");
                     GregorianCalendar calendar = new GregorianCalendar(TimeZone.getTimeZone("US/Mountain"));
                     calendar.setTimeInMillis(lastMod);
                     Formatter fmt = new Formatter();
                     fmt.format("%10s", fileSize);
+
                     System.out.println(dir + read + write + execute + " " + fmt + " bytes " + date.format(calendar.getTime()) + " " + temp[i]);
                 }
 
@@ -233,7 +233,9 @@ public class Assign3 {
             System.out.println("Empty File Directory");
         }
     }
-    private static void ls(){
+
+    //if 'ls -l' is input. returns the number of files in directory
+    private static void ls() {
         String currentDir = System.getProperty("user.dir");
         File fileDir = new File(currentDir);
         String[] temp = fileDir.list();
@@ -241,7 +243,7 @@ public class Assign3 {
 
     }
 
-    //TODO this doesnt work right, figure out how pipelining workd outside of my command shell so i can replacate here
+    //code for pipe() was heavily influenced by the code that Dean Mathias posted from class
     private static void pipe(String command) {
         String[] commandList = command.split("[|]");
         for (int i = 0; i < commandList.length; i++) {
@@ -254,8 +256,6 @@ public class Assign3 {
         ProcessBuilder pb2 = new ProcessBuilder(p2Cmd);
 
         pb1.redirectInput(ProcessBuilder.Redirect.INHERIT);
-        //pb1.redirectOutput(ProcessBuilder.Redirect.PIPE);
-
         pb2.redirectOutput(ProcessBuilder.Redirect.INHERIT);
 
         try {
@@ -283,19 +283,22 @@ public class Assign3 {
     private static void cd(String command) {
         String currentDir = System.getProperty("user.dir");
 
+        //if input "cd", goes to the users home directory
         if (command.equals("cd")) {
             currentDir = System.getProperty("user.home");
             java.nio.file.Path proposed = java.nio.file.Paths.get(currentDir);
             currentDir = System.setProperty("user.dir", proposed.toString());
 
-
+            //go to parent directory
         } else if (command.equals("cd ..")) {
             File fileDir = new File(currentDir);
             currentDir = fileDir.getParent();
             java.nio.file.Path proposed = java.nio.file.Paths.get(currentDir);
             currentDir = System.setProperty("user.dir", proposed.toString());
 
+
         } else {
+            //If " are found, redirect to makeDir and then go to new directory
             if (command.contains("\"")) {
                 makeDir(command);
                 String[] commandList = splitCommand(command);
@@ -303,10 +306,13 @@ public class Assign3 {
                 currentDir = System.setProperty("user.dir", proposed.toString());
 
             } else {
+                //go to directory
                 File fileDir = new File(currentDir);
                 String[] inputList = command.split(" ");
                 String[] temp = fileDir.list();
                 File[] directoryList = fileDir.listFiles();
+
+                //checking if the directory exists
                 boolean doesExist = false;
                 for (int i = 0; i < temp.length; i++) {
                     if (directoryList[i].getName().equals(inputList[1])) {
@@ -321,9 +327,12 @@ public class Assign3 {
 
             }
         }
-        //return currentDir;
     }
 
+    /**
+     * Split the user command by spaces, but preserving them when inside double-quotes.
+     * Code Adapted from: https://stackoverflow.com/questions/366202/regex-for-splitting-a-string-using-space-when-not-surrounded-by-single-or-double
+     */
     private static String[] splitCommand(String input) {
         java.util.List<String> matchList = new java.util.ArrayList<>();
 
@@ -346,12 +355,15 @@ public class Assign3 {
     }
 
     private static void makeDir(String command) {
+        
         String[] commandList = splitCommand(command);
         File newFile = new File(commandList[1]);
         boolean test = newFile.mkdirs();
+        //if a new directory was made
         if (test) {
             System.out.println("New directory named \"" + commandList[1] + "\" created");
         } else {
+            //if directory already existed
             System.out.println("directory named \"" + commandList[1] + "\" already exists or things were mispelled");
         }
     }
@@ -360,9 +372,11 @@ public class Assign3 {
         String[] commandList = splitCommand(command);
         File file = new File(commandList[1]);
         boolean test = file.delete();
+        //if the directory was deleted
         if (test) {
             System.out.println("file or directory named \"" + commandList[1] + "\" has been deleted");
         } else {
+            //if there was an error and the directroy was not deleted
             System.out.println("There was an error during deletion: make sure file is closed or directory is empty");
         }
 
@@ -370,7 +384,7 @@ public class Assign3 {
 
     private static void ptime(long time) {
         DecimalFormat df = new DecimalFormat("#.0000");
-        double time2 = time/1000.0000;
+        double time2 = time / 1000.0000;
         System.out.println("Total time in child process: " + df.format(time2) + " seconds");
     }
 
@@ -384,6 +398,6 @@ public class Assign3 {
     }
 
     private static void stop() {
-        System.exit(5);
+        System.exit(0);
     }
 }
