@@ -69,15 +69,14 @@ public class Assign3 {
 //            System.out.println(p1Cmd[i]);
 //        }
         ProcessBuilder pb1 = new ProcessBuilder(p1Cmd);
-
-
-        //pb1.redirectInput(ProcessBuilder.Redirect.INHERIT);
+        ProcessBuilder test = pb1.command(p1Cmd);
         long end = 0;
         long start = 0;
         long thisTime = 0;
         try {
             start = System.currentTimeMillis();
-            Process p1 = pb1.start();
+            Process p1 = test.start();
+            System.out.println(p1.info());
             //to display on commandline
             BufferedReader reader = new BufferedReader(new InputStreamReader((p1.getInputStream())));
             String line;
@@ -85,8 +84,6 @@ public class Assign3 {
                 System.out.println(line);
             }
             System.out.println("");
-
-            //System.out.println(p1.info());
             if(p1Cmd[p1Cmd.length - 1].equals("&")){
                 end = System.currentTimeMillis();
                 thisTime = end - start;
@@ -100,6 +97,7 @@ public class Assign3 {
         }
         catch (Exception ex) {
             System.out.println("Invalid command: " + command);
+            System.out.println(ex);
         }
     return time;
     }
