@@ -245,7 +245,7 @@ public class Assign3 {
 
     //TODO this doesnt work right, figure out how pipelining workd outside of my command shell so i can replacate here
     private static void pipe(String command) {
-        String[] commandList = splitCommand(command);
+        String[] commandList = command.split("[|]");
         for (int i = 0; i < commandList.length; i++) {
             System.out.println(commandList[i]);
         }
