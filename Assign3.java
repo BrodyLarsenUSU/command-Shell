@@ -17,17 +17,21 @@ public class Assign3 {
     public static void main(String[] args) {
         boolean run = true;
         ArrayList<String> inputList = new ArrayList<>();
+        long time = 0;
         while (run) {
+            boolean external = false;
             String command = getInput();
             inputList.add(command);
             if (command.equals("exit")) {
                 run = false;
                 stop();
-            } else if (command.equals("ptime")) { //TODO this gives an invalid command
-                ptime(command);
+            } else if (command.equals("ptime")) {
+                ptime(time);
             } else if (command.equals("list")) {
                 list();
-            } else if (command.equals("history")) { //TODO this gives an invalid command at the end evan though it works
+            } else if (command.equals("ls -l")) {
+                ls();
+            } else if (command.equals("history")) {
                 getHistory(inputList, inputList.size());
             } else if (command.contains("cd")) {
                 cd(command);
@@ -38,18 +42,48 @@ public class Assign3 {
             } else if (command.contains(("history ^ "))) {
                 String[] input = command.split(" ");
                 int number = Integer.parseInt(input[2]);
-                historyInput(inputList, number);
+                historyInput(inputList, number, time);
             } else if (command.contains("mdir")) {
                 makeDir(command);
             } else if (command.contains("rdir")) {
                 removeDir(command);
             } else if (command.contains("|")) {
                 pipe(command);
-            } else {
-                System.out.println("Invalid Command: " + command);
+            } else
+                external = true;
+            while (external) {
+                try {
+                    time = externalCommand(command, time);
+                    external = false;
+                } catch (Exception ex) {
+                    //System.out.println("Invalid Command: " + command);
+                }
             }
         }
 
+
+    }
+
+    private static long externalCommand(String command, long time){
+        String[] p1Cmd = splitCommand(command);
+        ProcessBuilder pb1 = new ProcessBuilder(p1Cmd);
+        pb1.redirectInput(ProcessBuilder.Redirect.INHERIT);
+        long end = 0;
+        long start = 0;
+        long thisTime = 0;
+        try {
+            start = System.currentTimeMillis();
+            Process p1 = pb1.start();
+            p1.waitFor();
+            end = System.currentTimeMillis();
+            thisTime = end - start;
+            time += thisTime;
+
+        }
+        catch (Exception ex) {
+            System.out.println("Invalid command: " + command);
+        }
+    return time;
     }
 
     private static void getHistory(ArrayList inputList, int lengthList) {
@@ -82,7 +116,7 @@ public class Assign3 {
         }
     }
 
-    private static void historyInput(ArrayList inputList, int num) {
+    private static long historyInput(ArrayList inputList, int num , long time) {
         boolean loop = true;
         while (loop) {
             if(inputList.size() == 1){
@@ -96,13 +130,14 @@ public class Assign3 {
             Object tempInput = inputList.get(inputList.size() - num);
             String newInput = tempInput.toString();
             try {
-                if (newInput.equals("exit")) {
-                    stop();
-                } else if (newInput.equals("ptime")) {
-                    ptime(newInput);
+                 if (newInput.equals("ptime")) {
+                    ptime(time);
                 } else if (newInput.equals("list")) {
                     list();
-                } else if (newInput.equals("history")) {
+                }else if(newInput.equals("ls -l")){
+                     ls();
+                 }
+                 else if (newInput.equals("history")) {
                     getHistory(inputList, inputList.size());
                 } else if (newInput.contains("cd")) {
                     cd(newInput);
@@ -127,6 +162,7 @@ public class Assign3 {
             }
             loop = false;
         }
+        return time;
     }
 
 
@@ -173,6 +209,13 @@ public class Assign3 {
             System.out.println("Empty File Directory");
         }
     }
+    private static void ls(){
+        String currentDir = System.getProperty("user.dir");
+        File fileDir = new File(currentDir);
+        String[] temp = fileDir.list();
+        System.out.println("Total: " + temp.length);
+
+    }
 
     //TODO this doesnt work right, figure out how pipelining workd outside of my command shell so i can replacate here
     private static void pipe(String command) {
@@ -212,7 +255,7 @@ public class Assign3 {
         }
     }
 
-    private static String cd(String command) {
+    private static void cd(String command) {
         String currentDir = System.getProperty("user.dir");
 
         if (command.equals("cd")) {
@@ -253,7 +296,7 @@ public class Assign3 {
 
             }
         }
-        return currentDir;
+        //return currentDir;
     }
 
     private static String[] splitCommand(String input) {
@@ -300,23 +343,8 @@ public class Assign3 {
 
     }
 
-    private static void ptime(String input) {
-        try {
-
-            String[] command = {input};
-            ProcessBuilder pb = new ProcessBuilder(command);
-            long start = System.currentTimeMillis();
-            Process p = pb.start();
-
-            System.out.println("Starting to wait");
-            p.waitFor();
-            long end = System.currentTimeMillis();
-            System.out.printf("Program took %d milliseconds\n", end - start);
-        } catch (IOException ex) {
-            System.out.println("Illegal command im still not working");
-        } catch (Exception ex) {
-            System.out.println("Something else bad happened");
-        }
+    private static void ptime(long time) {
+        System.out.println(time);
     }
 
     private static String getInput() {
