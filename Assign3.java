@@ -1,4 +1,5 @@
 import java.text.DateFormat;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.io.IOException;
@@ -11,7 +12,6 @@ import java.io.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.sun.tools.attach.VirtualMachine.list;
 
 public class Assign3 {
     public static void main(String[] args) {
@@ -39,10 +39,10 @@ public class Assign3 {
                 String[] input = command.split(" ");
                 int number = Integer.parseInt(input[2]);
                 getNumberedHistory(inputList, number);
-            } else if (command.contains(("history ^ "))) {
+            } else if (command.contains(("^ "))) {
                 String[] input = command.split(" ");
-                int number = Integer.parseInt(input[2]);
-                historyInput(inputList, number, time);
+                int number = Integer.parseInt(input[1]);
+                time = historyInput(inputList, number, time);
             } else if (command.contains("mdir")) {
                 makeDir(command);
             } else if (command.contains("rdir")) {
@@ -56,7 +56,6 @@ public class Assign3 {
                     time = externalCommand(command, time);
                     external = false;
                 } catch (Exception ex) {
-                    //System.out.println("Invalid Command: " + command);
                 }
             }
         }
@@ -66,14 +65,33 @@ public class Assign3 {
 
     private static long externalCommand(String command, long time){
         String[] p1Cmd = splitCommand(command);
+//        for(int i = 0; i < p1Cmd.length; i++){
+//            System.out.println(p1Cmd[i]);
+//        }
         ProcessBuilder pb1 = new ProcessBuilder(p1Cmd);
-        pb1.redirectInput(ProcessBuilder.Redirect.INHERIT);
+
+
+        //pb1.redirectInput(ProcessBuilder.Redirect.INHERIT);
         long end = 0;
         long start = 0;
         long thisTime = 0;
         try {
             start = System.currentTimeMillis();
             Process p1 = pb1.start();
+            //to display on commandline
+            BufferedReader reader = new BufferedReader(new InputStreamReader((p1.getInputStream())));
+            String line;
+            while((line = reader.readLine()) != null){
+                System.out.println(line);
+            }
+            System.out.println("");
+
+            //System.out.println(p1.info());
+            if(p1Cmd[p1Cmd.length - 1].equals("&")){
+                end = System.currentTimeMillis();
+                thisTime = end - start;
+                time += thisTime;
+            }else
             p1.waitFor();
             end = System.currentTimeMillis();
             thisTime = end - start;
@@ -119,7 +137,7 @@ public class Assign3 {
     private static long historyInput(ArrayList inputList, int num , long time) {
         boolean loop = true;
         while (loop) {
-            if(inputList.size() == 1){
+            if (inputList.size() == 1) {
                 System.out.println("No previous commands have been given");
                 break;
             }
@@ -130,23 +148,23 @@ public class Assign3 {
             Object tempInput = inputList.get(inputList.size() - num);
             String newInput = tempInput.toString();
             try {
-                 if (newInput.equals("ptime")) {
+                boolean external = false;
+                if (newInput.equals("ptime")) {
                     ptime(time);
                 } else if (newInput.equals("list")) {
                     list();
-                }else if(newInput.equals("ls -l")){
-                     ls();
-                 }
-                 else if (newInput.equals("history")) {
+                } else if (newInput.equals("ls -l")) {
+                    ls();
+                } else if (newInput.equals("history")) {
                     getHistory(inputList, inputList.size());
                 } else if (newInput.contains("cd")) {
                     cd(newInput);
                 } else if (newInput.contains("history last")) {
                     String[] input = newInput.split(" ");
-                    int number = Integer.parseInt(input[2]);
+                    int number = Integer.parseInt(input[1]);
                     getNumberedHistory(inputList, number);
-                } else if (newInput.contains(("history ^ "))) {
-                    System.out.println("Error: The command found was also a 'history ^ #' command and an infinite loop would have occured");
+                } else if (newInput.contains(("^ "))) {
+                    System.out.println("Error: The command found was also a '^ #' command and an infinite loop would have occured");
                     System.out.println("Don't worry I stopped that from happening");
                 } else if (newInput.contains("mdir")) {
                     makeDir(newInput);
@@ -154,14 +172,22 @@ public class Assign3 {
                     removeDir(newInput);
                 } else if (newInput.contains("|")) {
                     pipe(newInput);
-                } else {
-                    System.out.println("Invalid Command: " + newInput);
+                } else
+                    external = true;
+                    while (external) {
+                        try {
+                            time = externalCommand(newInput, time);
+                            external = false;
+                        } catch (Exception ex) {
+                        }
+                    }
+                } catch(Exception ex){
+                    System.out.println("fail");
                 }
-            } catch (Exception ex) {
-                System.out.println("fail");
-            }
-            loop = false;
-        }
+                loop = false;
+
+
+    }
         return time;
     }
 
@@ -252,6 +278,7 @@ public class Assign3 {
             p1.waitFor();
             p2.waitFor();
         } catch (Exception ex) {
+            System.out.println("the pipe didnt work");
         }
     }
 
@@ -344,7 +371,9 @@ public class Assign3 {
     }
 
     private static void ptime(long time) {
-        System.out.println(time);
+        DecimalFormat df = new DecimalFormat("#.0000");
+        double time2 = time/1000.0000;
+        System.out.println("Total time in child process: " + df.format(time2) + " seconds");
     }
 
     private static String getInput() {
